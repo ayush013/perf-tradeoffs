@@ -1,86 +1,141 @@
 import "./styles.css";
-import Card from "./card";
 import Spinner from "./spinner";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, lazy } from "react";
 import { initPerfObserver } from "./perf-observer";
+import { Suspense } from "react";
+import ChunkedProcessingDemo from "./ChunkedProcessingDemo";
 
-const CARDS = 10;
+const somethingReallyExpensive = (ms) => {
+  const start = performance.now();
+  while (performance.now() - start < ms) {
+    // do nothing
+  }
+  console.log("done");
+};
+
+const LazyModal = lazy(() =>
+  import("react-modal").then((Modal) => {
+    console.log("Modal", Modal);
+    Modal.default.setAppElement("#root");
+    return Modal;
+  })
+);
+
+const WAIT_TIME = 2000;
+
+const debounce = (fn, ms) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), ms);
+  };
+};
 
 export default function App() {
-  const [activeCard, setActiveCard] = useState(0);
-  const [activeCardValue, setActiveCardValue] = useState(activeCard);
-
-  const [isPending, startTransition] = useTransition();
-
-  const [isPerfEnabled, setisPerfEnabled] = useState(true);
-
-  const remoteRef = useRef(null);
+  const [taskQueue, setTaskQueue] = useState([]);
+  const [isChunkedProcessingDemoActive, setIsChunkedProcessingDemoActive] =
+    useState(false);
 
   useEffect(() => {
-    const remote = remoteRef.current;
-
     initPerfObserver();
-
-    const onClick = (e) => {
-      if (e.target.classList.contains("action")) {
-        if (e.target.id === "up") {
-          setActiveCard((card) => (card - 1 < 0 ? 0 : card - 1));
-          startTransition(() =>
-            setActiveCardValue((card) => (card - 1 < 0 ? 0 : card - 1))
-          );
-        } else {
-          setActiveCard((card) => (card + 1 >= CARDS ? card : card + 1));
-          startTransition(() =>
-            setActiveCardValue((card) => (card + 1 >= CARDS ? card : card + 1))
-          );
-        }
-      }
-    };
-
-    remote.addEventListener("click", onClick);
-
-    return () => {
-      remote.removeEventListener("click", onClick);
-      // task.abort();
-    };
   }, []);
+
+  const [modalIsOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    if (taskQueue.length > 0) {
+      const task = taskQueue[0];
+      const taskWithStateUpdate = (ms) => {
+        task(ms);
+        setTaskQueue((queue) => queue.slice(1));
+      };
+      const debouncedTask = debounce(taskWithStateUpdate, 1000);
+      debouncedTask(WAIT_TIME);
+    }
+  }, [taskQueue]);
+
+  const preloadJS = () => {
+    requestIdleCallback(() => {
+      import("./heavy").then((module) => {
+        console.log("loaded", module);
+      });
+    });
+  };
+
+  const addExpensiveTask = () => {
+    setTaskQueue((queue) => [...queue, somethingReallyExpensive]);
+  };
+
+  const closeModal = () => setIsOpen(false);
+  const openModal = () => {
+    setIsOpen(true);
+  };
+
+  const toggleChunkedProcessingDemo = () => {
+    setIsChunkedProcessingDemoActive(!isChunkedProcessingDemoActive);
+  };
 
   return (
     <div className="root">
-      <div
-        className="App"
-        style={{ transform: `translateY(-${activeCard * (200 + 32)}px)` }}
-      >
-        {new Array(CARDS).fill(0).map((_, index) => {
-          return (
-            <Card
-              focused={index === activeCardValue}
-              isPerfEnabled={isPerfEnabled}
-              key={index}
-              enableFsl={false}
-            />
-          );
-        })}
-      </div>
-      <div className="remote" ref={remoteRef}>
-        <div
-          className="button perf-toggle"
-          onClick={() => setisPerfEnabled(!isPerfEnabled)}
-        >
-          {isPerfEnabled ? "🚀" : "🫠"}
-        </div>
-        <div className="buttons">
-          <div className="button action" id="up">
-            ⬆️
-          </div>
-          <div className="button action" id="down">
-            ⬇️
-          </div>
-        </div>
-      </div>
       <div className="main-thread">
-        <Spinner />
+        <span className="main-thread-text">Main thread</span>
+        <div className="spinner">
+          <Spinner />
+        </div>
+      </div>
+      <div className="task-queue">
+        <span className="task-queue-text">To be executed:</span>
+        <div className="task-queue-list">
+          {taskQueue.map((_, index) => (
+            <div className="task-queue-item" key={index}>
+              {generateRandomTaskFunnyName(index)}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {modalIsOpen && (
+        <Suspense fallback={<div>Loading...</div>}>
+          <LazyModal
+            isOpen={modalIsOpen}
+            onRequestClose={closeModal}
+            contentLabel="Example Modal"
+          >
+            <h2 style={{ background: "none", color: "black" }}>Hello</h2>
+          </LazyModal>
+        </Suspense>
+      )}
+
+      {isChunkedProcessingDemoActive && <ChunkedProcessingDemo />}
+
+      <div className="remote">
+        <div className="buttons">
+          <div className="button action" onClick={addExpensiveTask}>
+            Add expensive task 🤑
+          </div>
+          <div className="button action" onClick={preloadJS}>
+            Preload JS
+          </div>
+          <div className="button action" onClick={openModal}>
+            Open Modal
+          </div>
+          <div className="button action" onClick={toggleChunkedProcessingDemo}>
+            Chunked processing demo
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+const generateRandomTaskFunnyName = (i) => {
+  const funnyNames = [
+    "Janky task 😫",
+    "Expensive task 💰",
+    "Heavy task 💪",
+    "Long task 🕒",
+    "Stressful task 🤯",
+    "Busy task 🤒",
+  ];
+  return funnyNames[i % funnyNames.length];
+};
