@@ -14,10 +14,8 @@ const somethingReallyExpensive = (ms) => {
 };
 
 const LazyModal = lazy(() =>
-  import("react-modal").then((Modal) => {
-    console.log("Modal", Modal);
-    Modal.default.setAppElement("#root");
-    return Modal;
+  import("./mock-modal").then(() => {
+    return import("./modal");
   })
 );
 
@@ -97,13 +95,9 @@ export default function App() {
       </div>
 
       {modalIsOpen && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <LazyModal
-            isOpen={modalIsOpen}
-            onRequestClose={closeModal}
-            contentLabel="Example Modal"
-          >
-            <h2 style={{ background: "none", color: "black" }}>Hello</h2>
+        <Suspense fallback={<div className="p-4 text-3xl">Loading...</div>}>
+          <LazyModal onClick={() => setIsOpen(false)}>
+            <h2 className="text-3xl font-bold">Hello World</h2>
           </LazyModal>
         </Suspense>
       )}
