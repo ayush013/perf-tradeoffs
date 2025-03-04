@@ -84,7 +84,9 @@ export default function App() {
         </div>
       </div>
       <div className="task-queue">
-        <span className="task-queue-text">To be executed:</span>
+        {taskQueue.length > 0 && (
+          <span className="task-queue-text">To be executed:</span>
+        )}
         <div className="task-queue-list">
           {taskQueue.map((_, index) => (
             <div className="task-queue-item" key={index}>
@@ -109,7 +111,7 @@ export default function App() {
       {isChunkedProcessingDemoActive && <ChunkedProcessingDemo />}
 
       <div className="remote">
-        <div className="buttons">
+        <div className="buttons grid grid-cols-2 gap-4 w-full">
           <div className="button action" onClick={addExpensiveTask}>
             Add expensive task 🤑
           </div>
