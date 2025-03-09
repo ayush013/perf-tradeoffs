@@ -4,6 +4,7 @@ import { useEffect, useState, lazy } from "react";
 import { initPerfObserver } from "./perf-observer";
 import { Suspense } from "react";
 import ChunkedProcessingDemo from "./ChunkedProcessingDemo";
+import VirtualizationComparison from "./Virtualisation";
 
 const somethingReallyExpensive = (ms) => {
   const start = performance.now();
@@ -39,6 +40,8 @@ export default function App() {
   }, []);
 
   const [modalIsOpen, setIsOpen] = useState(false);
+  const [virtualisationExampleActive, setVirtualisationExampleActive] =
+    useState(false);
 
   useEffect(() => {
     if (taskQueue.length > 0) {
@@ -73,13 +76,19 @@ export default function App() {
     setIsChunkedProcessingDemoActive(!isChunkedProcessingDemoActive);
   };
 
+  const toggleVirtualisationDemo = () => {
+    setVirtualisationExampleActive(!virtualisationExampleActive);
+  };
+
   return (
     <div className="root">
       <div className="main-thread">
         <span className="main-thread-text">Main thread</span>
-        <div className="spinner">
-          <Spinner />
-        </div>
+        {!virtualisationExampleActive && (
+          <div className="spinner">
+            <Spinner />
+          </div>
+        )}
       </div>
       <div className="task-queue">
         {taskQueue.length > 0 && (
@@ -102,6 +111,8 @@ export default function App() {
         </Suspense>
       )}
 
+      {virtualisationExampleActive && <VirtualizationComparison />}
+
       {isChunkedProcessingDemoActive && <ChunkedProcessingDemo />}
 
       <div className="remote">
@@ -110,13 +121,16 @@ export default function App() {
             Add expensive task 🤑
           </div>
           <div className="button action" onClick={preloadJS}>
-            Preload JS
+            Preload JS 🪄
           </div>
           <div className="button action" onClick={openModal}>
-            Open Modal
+            Open Modal 🧩
           </div>
           <div className="button action" onClick={toggleChunkedProcessingDemo}>
-            Chunked processing demo
+            Chunked processing 🕥
+          </div>
+          <div className="button action" onClick={toggleVirtualisationDemo}>
+            Virtualisation 🏁
           </div>
         </div>
       </div>
