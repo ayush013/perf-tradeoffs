@@ -1,2 +1,2 @@
-# keen-murdock-gclpsl
-Created with CodeSandbox
+# Perf tradeoffs (React demo)
+
